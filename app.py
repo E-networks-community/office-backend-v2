@@ -299,8 +299,6 @@ def submit_form():
         # Create a new instance of AccecptanceForm
         acceptance_form = AccecptanceForm(
             full_name=form_data.get('name'),
-            email=form_data.get('email'),
-            password=form_data.get('password'),
             bvn=form_data.get('bvn'),
             nin=form_data.get('nin'),
             agent_email=form_data.get('agent_email'),
