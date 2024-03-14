@@ -13,7 +13,7 @@ waitress
 gunicorn
 passlib
 cloudinary
-# psycopg2
+psycopg2
 flask_migrate
 pandas
 # dr isah saliyu
