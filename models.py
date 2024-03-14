@@ -7,8 +7,6 @@ db = SQLAlchemy()
 class AccecptanceForm(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()), unique=True)
     full_name = db.Column(db.String(255), nullable=False, unique=True)
-    email = db.Column(db.String(255), nullable=False, unique=True, index=True)
-    password = db.Column(db.String(50), nullable=False, default="0000-0000")
     bvn = db.Column(db.String(20), nullable=False, unique=True)
     nin = db.Column(db.String(20), nullable=False, unique=True)
     agent_email = db.Column(db.String(20), nullable=False, unique=True)
@@ -39,8 +37,6 @@ class AccecptanceForm(db.Model):
         return {
             "id": self.id,
             "name": self.name,
-            "email": self.email,
-            "phone_number": self.phone_number,
             "address": self.address,
             "gender": self.gender,
             "created_at": str(self.created_at),
