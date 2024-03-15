@@ -328,6 +328,7 @@ def submit_form():
         user.filled_form = True
 
         # Update remaining fields of the user model
+	user.full_name = form_data.get('name')
         user.address = form_data.get('address')
         user.bvn = form_data.get('bvn')
         user.nin = form_data.get('nin')
@@ -342,6 +343,7 @@ def submit_form():
         user.date_of_birth = datetime.strptime(
             form_data.get('date_of_birth'), '%Y-%m-%d').date()
         user.phone_number = form_data.get('phone_number')
+	user.profile_image = profile_image
 
         db.session.commit()
 

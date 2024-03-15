@@ -36,7 +36,7 @@ class AccecptanceForm(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
-            "name": self.name,
+            "name": self.full_name,
             "address": self.address,
             "gender": self.gender,
             "created_at": str(self.created_at),
