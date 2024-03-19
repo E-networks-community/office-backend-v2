@@ -193,6 +193,45 @@ class User(db.Model):
             "referral": self.referral.to_dict() if self.referral else None,
             "successful_referrals": [referral.to_dict() for referral in self.referrals_made]
         }
+    
+
+
+
+class FieldOfficerAccecptanceForm(db.Model):
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()), unique=True)
+    full_name = db.Column(db.String(255), nullable=False, unique=True)
+    bvn = db.Column(db.String(20), nullable=False, unique=True)
+    nin = db.Column(db.String(20), nullable=False, unique=True)
+    agent_email = db.Column(db.String(20), nullable=False, unique=True)
+    agent_card_number = db.Column(db.String(20), nullable=False, unique=True)
+    address = db.Column(db.String(255), nullable=False, unique=True)
+    gender = db.Column(db.String(20), nullable=False, unique=True)
+    
+    # Images
+    profile_image = db.Column(db.TEXT, nullable=False, unique=True)
+    signature = db.Column(db.TEXT, nullable=False, unique=True)
+    passport = db.Column(db.TEXT, nullable=False, unique=True)    
+
+    # time and date
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow)
+    date_of_birth = db.Column(db.DateTime)
+
+    # Boolean
+    is_email_verified = db.Column(db.Boolean, default=False, index=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.full_name,
+            "address": self.address,
+            "gender": self.gender,
+            "created_at": str(self.created_at),
+            "modified_at": str(self.modified_at),
+            "passport_photo": self.passport_photo,
+            "date_of_birth": str(self.date_of_birth) if self.date_of_birth else None,
+            "signature": self.signature,
+        }
 
 class FieldOfficer(db.Model):
     id = db.Column(db.String(36), primary_key=True,
@@ -283,3 +322,4 @@ class FieldOfficerSuccessfulReferral(db.Model):
             "timestamp": str(self.timestamp),
             "referral_id": self.referral_id,
         }
+
