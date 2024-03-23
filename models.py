@@ -276,6 +276,8 @@ class FieldOfficer(db.Model):
             "modified_at": str(self.modified_at),
             "profile_image": self.profile_image,
             "is_email_verified": self.is_email_verified,
+            "nominated_me": self.nominated_me,
+            "unique_referral_link": self.unique_referral_link,
             "office_status": self.office_status,
             "referral": self.referral.to_dict() if self.referral else None,
             "successful_referrals": [referral.to_dict() for referral in self.referrals_made]
@@ -296,6 +298,24 @@ class FieldOfficerReferral(db.Model):
             "monthly_target": self.monthly_target,
             "total_referrals_completed": self.total_referrals,
         }
+
+    def calculate_completion_percentage(self):
+        if self.monthly_target == 0:
+            return 100  # If monthly target is 0, completion is 100%
+        return (self.total_referrals / self.monthly_target) * 100
+
+    def get_monthly_users(self):
+        # Calculate the start and end dates for the current month
+        today = datetime.utcnow().date()
+        start_date = date(today.year, today.month, 1)
+        end_date = date(today.year, today.month + 1, 1) - timedelta(days=1)
+
+        # Query successful referrals within the current month
+        monthly_users = FieldOfficerSuccessfulReferral.query.filter(
+            FieldOfficerSuccessfulReferral.referrer_id == self.user_id,
+            FieldOfficerSuccessfulReferral.timestamp >= start_date,
+            FieldOfficerSuccessfulReferral.timestamp <= end_date
+        ).distinct(FieldOfficerSuccessfulReferral.referred_user_email).count()
 
 class FieldOfficerSuccessfulReferral(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -322,4 +342,11 @@ class FieldOfficerSuccessfulReferral(db.Model):
             "timestamp": str(self.timestamp),
             "referral_id": self.referral_id,
         }
+    
+    @staticmethod
+    def get_successful_referrals(user_id, limit=10):
+        # Get the successful referrals made by a user
+        referrals = FieldOfficerSuccessfulReferral.query.filter_by(
+            referrer_id=user_id).limit(limit).all()
+        return [referral.to_dict() for referral in referrals]
 

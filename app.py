@@ -12,7 +12,7 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_session import Session
-from models import db, User, AccecptanceForm, SuccessfulReferral, Referral, FieldOfficer, FieldOfficerReferral
+from models import db, User, AccecptanceForm, SuccessfulReferral, Referral, FieldOfficer, FieldOfficerReferral, FieldOfficerSuccessfulReferral
 from config import ApplicationConfig
 import os
 import requests
@@ -328,7 +328,8 @@ def submit_form():
         user.filled_form = True
 
         # Update remaining fields of the user model
-	    user.full_name = form_data.get('name')
+	    
+        user.full_name = form_data.get('name')
         user.address = form_data.get('address')
         user.bvn = form_data.get('bvn')
         user.nin = form_data.get('nin')
@@ -340,10 +341,9 @@ def submit_form():
         user.guarantor_bvn = form_data.get('guarantor_bvn')
         user.guarantor_nin = form_data.get('guarantor_nin')
         user.guarantor_address = form_data.get('guarantor_address')
-        user.date_of_birth = datetime.strptime(
-            form_data.get('date_of_birth'), '%Y-%m-%d').date()
+        user.date_of_birth = datetime.strptime(form_data.get('date_of_birth'), '%Y-%m-%d').date()
         user.phone_number = form_data.get('phone_number')
-	    user.profile_image = profile_image
+        user.profile_image = cloudinary.uploader.upload(profile_image)['url']
 
         db.session.commit()
 
@@ -471,7 +471,6 @@ def create_field_officer():
         # Extracting data from the form
         email = data.get('email')
         full_name = data.get('full_name')
-        password = data.get('password')
         phone_number = data.get('phone_number')
         agent_email = data.get('agent_email')
         agent_card_no = data.get('agent_card_no')
@@ -496,11 +495,14 @@ def create_field_officer():
         # Create a unique referral link
         unique_referral_link = f"https://enetworkspay.com/register.php?ref={nominated_me}&id={email}"
 
+        password = "0000-0000"
+        hashed_password = bcrypt_sha256.hash(password)
+
         # Create a new field officer instance
         new_field_officer = FieldOfficer(
             email=email,
             full_name=full_name,
-            password=password,
+            password=hashed_password,
             phone_number=phone_number,
             agent_email=agent_email,
             agent_card_no=agent_card_no,
@@ -545,6 +547,291 @@ def create_field_officer():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/field/login', methods=["POST"])
+def field_login():
+    email = request.json.get('email')
+    password = request.json.get('password')
+
+    user = FieldOfficer.query.filter_by(email=email).first()
+
+    if user is None or not bcrypt_sha256.verify(password, user.password):
+        return jsonify({"message": "Wrong email or password"}), 401
+
+    # Create the access token with the user ID as the identity
+    access_token = create_access_token(identity=str(user.id))
+
+    # Return the access token and user role as JSON response
+    return jsonify(message="Logged in successfully", access_token=access_token), 200
+
+
+
+
+
+
+@app.route('/field/dashboard', methods=["GET"])
+@jwt_required()
+def field_dashboard():
+
+    current_user_id = get_jwt_identity()
+
+    # Query the user information from the database
+    user = FieldOfficer.query.filter_by(id=current_user_id).first()
+
+    if user is None:
+        return jsonify({"message": "User not found"}), 404
+
+    # Get user data using the to_dict method
+    dashboard_data = user.to_dict()
+
+    return jsonify(dashboard_data), 200
+
+@app.route('/field/submit_referral', methods=['POST'])
+@jwt_required()
+def field_submit_referral():
+    try:
+        current_user_id = get_jwt_identity()
+
+        # Ensure the current user exists
+        current_user = FieldOfficer.query.get(current_user_id)
+        if not current_user:
+            return jsonify({"message": "User not found"}), 404
+
+        # Parse details from the request
+        referred_user_name = request.json.get('referred_user_name')
+        referred_user_email = request.json.get('referred_user_email')
+        referred_user_card_number = request.json.get('referred_user_card_number')
+
+        # Make API request to fetch user data
+        api_url_fetch_user_data = 'https://enetworkspay.com/backend_data/api/fetch_user_data.php'
+        api_payload_fetch_user_data = {'email': referred_user_email}
+        api_response_fetch_user_data = requests.post(
+            api_url_fetch_user_data, data=api_payload_fetch_user_data)
+
+        if api_response_fetch_user_data.status_code == 200:
+            api_data_fetch_user_data = api_response_fetch_user_data.json()
+
+            if api_data_fetch_user_data['status']:
+                user_data = api_data_fetch_user_data['agent_details']
+
+                # Check if the email in the referred_me matches the email of the logged-in user
+                if user_data.get('referred_by') != current_user.email:
+                    return jsonify({"message": "The nominated user does not match the referred user"}), 400
+
+                # Check account status and error reasons
+                if user_data['account_status'] is False or user_data.get('error_reason'):
+                    error_reasons = user_data.get('error_reason', [])
+                    return jsonify({"message": "Applicant does not have a valid account or card", "error_reasons": error_reasons}), 400
+
+                # Check user balance
+                if "Applicant must have a minimum wallet balance of #10,000." in user_data.get('error_reason', []):
+                    error_reasons = user_data.get('error_reason', [])
+                    return jsonify({"message": "Applicant must have a minimum wallet balance of #10,000.", "error_reasons": error_reasons}), 400
+
+                # Create a new SuccessfulReferral instance
+                new_referral = SuccessfulReferral(
+                    referrer_id=current_user.id,
+                    referred_user_name=referred_user_name,
+                    referred_user_email=referred_user_email,
+                    referred_user_card_number=referred_user_card_number,
+                    validity=True,
+                    timestamp=datetime.utcnow()
+                )
+
+                # Add the new referral to the database
+                db.session.add(new_referral)
+                db.session.commit()
+
+                # Update the Referral table
+                referral = Referral.query.filter_by(
+                    user_id=current_user.id).first()
+                if referral:
+                    referral.total_referrals = referral.total_referrals + 1
+                    db.session.commit()
+
+                return jsonify({"message": "Referral submitted successfully"}), 201
+
+            else:
+                error_reasons = api_data_fetch_user_data.get(
+                    "error_reason", [])
+                return jsonify({"message": "Failed to fetch user data", "error_reasons": error_reasons}), 500
+
+        else:
+            return jsonify({"message": "Failed to fetch user data", "error_reasons": []}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/field/submit_form', methods=['POST'])
+@jwt_required()
+def field_submit_form():
+    try:
+        current_user_id = get_jwt_identity()
+
+        # Check if the current user is logged in
+        if not current_user_id:
+            return jsonify({"message": "User not logged in"}), 401
+
+        user = User.query.get(current_user_id)
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+
+        form_data = request.form
+        signature_image = request.files.get('signature')
+        profile_image = request.files.get('profile_image')
+        passport_photo = request.files.get('passport_photo')
+        guarantor_photo = request.files.get('guarantor_passport')
+
+        if not signature_image or not profile_image or not passport_photo or not guarantor_photo:
+            return jsonify(message="One or more required files not provided in the request"), 400
+
+        required_fields = ['name', 'address', 'bvn', 'nin', 'agent_email', 'agent_card_number',
+                           'gender', 'guarantor_name', 'guarantor_phone_number', 'guarantor_bvn', 'guarantor_nin',
+                           'guarantor_address', 'date_of_birth', 'phone_number']
+
+        for field in required_fields:
+            if field not in form_data:
+                return jsonify({"message": f"Missing required field: {field}"}), 400
+
+        # Create a new instance of AccecptanceForm
+        acceptance_form = AccecptanceForm(
+            full_name=form_data.get('name'),
+            bvn=form_data.get('bvn'),
+            nin=form_data.get('nin'),
+            agent_email=form_data.get('agent_email'),
+            agent_card_number=form_data.get('agent_card_number'),
+            address=form_data.get('address'),
+            gender=form_data.get('gender'),
+            guarantor_name=form_data.get('guarantor_name'),
+            guarantor_phone_number=form_data.get('guarantor_phone_number'),
+            guarantor_bvn=form_data.get('guarantor_bvn'),
+            guarantor_nin=form_data.get('guarantor_nin'),
+            guarantor_address=form_data.get('guarantor_address'),
+            guarantor_pasport=cloudinary.uploader.upload(guarantor_photo)['url'],
+            profile_image=cloudinary.uploader.upload(profile_image)['url'],
+            signature=cloudinary.uploader.upload(signature_image)['url'],
+            passport=cloudinary.uploader.upload(passport_photo)['url'],
+            created_at=datetime.utcnow(),
+            modified_at=datetime.utcnow(),
+            date_of_birth=datetime.strptime(form_data.get('date_of_birth'), '%Y-%m-%d').date(),
+            is_email_verified=False
+        )
+
+        # Add the acceptance form to the database
+        db.session.add(acceptance_form)
+        db.session.commit()
+
+        # Update user filled_form attribute
+        user.filled_form = True
+
+        # Update remaining fields of the user model
+	    
+        user.full_name = form_data.get('name')
+        user.address = form_data.get('address')
+        user.bvn = form_data.get('bvn')
+        user.nin = form_data.get('nin')
+        user.agent_email = form_data.get('agent_email')
+        user.agent_card_no = form_data.get('agent_card_number')
+        user.gender = form_data.get('gender')
+        user.guarantor_name = form_data.get('guarantor_name')
+        user.guarantor_phone_number = form_data.get('guarantor_phone_number')
+        user.guarantor_bvn = form_data.get('guarantor_bvn')
+        user.guarantor_nin = form_data.get('guarantor_nin')
+        user.guarantor_address = form_data.get('guarantor_address')
+        user.date_of_birth = datetime.strptime(form_data.get('date_of_birth'), '%Y-%m-%d').date()
+        user.phone_number = form_data.get('phone_number')
+        user.profile_image = cloudinary.uploader.upload(profile_image)['url']
+
+        db.session.commit()
+
+        return jsonify(message="Form submitted successfully"), 200
+
+    except Exception as e:
+        return jsonify(message=str(e)), 500
+
+
+@app.route('/field/monthly_users', methods=['GET'])
+@jwt_required()
+def field_get_monthly_users():
+    try:
+        # Get the current user's identity from the JWT token
+        current_user_id = get_jwt_identity()
+
+        # Ensure the current user exists
+        current_user_referral = FieldOfficerReferral.query.filter_by(user_id=current_user_id).first()
+        if not current_user_referral:
+            return jsonify({"message": "User referral data not found"}), 404
+
+        # Get the monthly users for the current user
+        monthly_users = current_user_referral.get_monthly_users()
+
+        return jsonify({"monthly_users": monthly_users}), 200
+
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+@app.route('/field/successful_referrals', methods=['GET'])
+@jwt_required()
+def field_get_successful_referrals_route():
+    try:
+        user_id = get_jwt_identity()
+        # Check if the user exists
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Get successful referrals for the user using the class method
+        referrals_data = FieldOfficerSuccessfulReferral.get_successful_referrals(user.id)
+
+        return jsonify({"successful_referrals": referrals_data})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/field/weekly_work_done', methods=['GET'])
+@jwt_required()
+def field_get_weekly_work_done_route():
+    try:
+        # Get user ID from the JWT identity
+        current_user_id = get_jwt_identity()
+
+        # Get weekly work done for the user
+        weekly_work_done = FieldOfficerSuccessfulReferral.get_weekly_work_done(
+            current_user_id)
+        return jsonify({"weekly_work_done": weekly_work_done})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/field/monthly_work_done', methods=['GET'])
+@jwt_required()
+def field_get_monthly_work_done_route():
+    try:
+        # Get user ID from the JWT identity
+        current_user_id = get_jwt_identity()
+
+        # Get monthly work done for the user
+        monthly_work_done = FieldOfficerSuccessfulReferral.get_monthly_work_done(
+            current_user_id)
+        return jsonify({"monthly_work_done": monthly_work_done})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/field/total_referrals_count', methods=['GET'])
+@jwt_required()
+def field_get_total_referrals_count_route():
+    try:
+        # Get user ID from the JWT identity
+        current_user_id = get_jwt_identity()
+
+        # Get total referrals count for the user
+        total_referrals_count = FieldOfficerSuccessfulReferral.get_total_referrals_count(
+            current_user_id)
+        return jsonify({"total_referrals_count": total_referrals_count})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
