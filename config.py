@@ -19,12 +19,12 @@ class ApplicationConfig:
     SQLALCHEMY_POOL_TIMEOUT = 3000
     SQLALCHEMY_POOL_RECYCLE = 36000
 
-    SQLALCHEMY_DATABASE_URI = r"sqlite:///./db.sqlite"
+    # SQLALCHEMY_DATABASE_URI = r"sqlite:///./db.sqlite"
     username = os.environ.get("USERNAME")
     password = os.environ.get("PASSWORD")
     localhost = os.environ.get("LOCALHOST")
     dbname = os.environ.get("DBNAME")
-    # SQLALCHEMY_DATABASE_URI = "postgresql://postgres:oRFudttTNIpRLXpfNYTemrDjGjiQESOn@roundhouse.proxy.rlwy.net:33543/railway"
+    SQLALCHEMY_DATABASE_URI = "postgresql://postgres:oRFudttTNIpRLXpfNYTemrDjGjiQESOn@roundhouse.proxy.rlwy.net:33543/railway"
 
     DATABASE_ENGINE = create_engine(SQLALCHEMY_DATABASE_URI)
     SESSION_TYPE = os.environ.get("SESSION_TYPE")
