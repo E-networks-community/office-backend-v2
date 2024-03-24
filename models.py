@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 import uuid
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 
 db = SQLAlchemy()
 
@@ -350,3 +351,41 @@ class FieldOfficerSuccessfulReferral(db.Model):
             referrer_id=user_id).limit(limit).all()
         return [referral.to_dict() for referral in referrals]
 
+    @staticmethod
+    def get_weekly_work_done(user_id):
+        # Calculate the start and end dates for the current week
+        start_of_week = datetime.now().date() - timedelta(days=datetime.now().date().weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+
+        # Query to get the successful referrals for the current week
+        weekly_work_done = FieldOfficerSuccessfulReferral.query.filter(
+            FieldOfficerSuccessfulReferral.referrer_id == user_id,
+            FieldOfficerSuccessfulReferral.timestamp >= start_of_week,
+            FieldOfficerSuccessfulReferral.timestamp <= end_of_week
+        ).all()
+
+        return [referral.to_dict() for referral in weekly_work_done]
+
+    @staticmethod
+    def get_monthly_work_done(user_id):
+        # Calculate the start and end dates for the current month
+        start_of_month = datetime.now().replace(day=1).date()
+        end_of_month = start_of_month + timedelta(days=31)
+
+        # Query to get the successful referrals for the current month
+        monthly_work_done = FieldOfficerSuccessfulReferral.query.filter(
+            FieldOfficerSuccessfulReferral.referrer_id == user_id,
+            FieldOfficerSuccessfulReferral.timestamp >= start_of_month,
+            FieldOfficerSuccessfulReferral.timestamp <= end_of_month
+        ).all()
+
+        return [referral.to_dict() for referral in monthly_work_done]
+
+    @staticmethod
+    def get_total_referrals(user_id):
+        # Query to get all successful referrals for the user
+        total_referrals = FieldOfficerSuccessfulReferral.query.filter(
+            FieldOfficerSuccessfulReferral.referrer_id == user_id
+        ).all()
+
+        return [referral.to_dict() for referral in total_referrals]

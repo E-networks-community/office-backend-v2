@@ -12,7 +12,7 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_session import Session
-from models import db, User, AccecptanceForm, SuccessfulReferral, Referral, FieldOfficer, FieldOfficerReferral, FieldOfficerSuccessfulReferral
+from models import db, User, AccecptanceForm, SuccessfulReferral, Referral, FieldOfficer, FieldOfficerReferral, FieldOfficerSuccessfulReferral, FieldOfficerAccecptanceForm
 from config import ApplicationConfig
 import os
 import requests
@@ -463,7 +463,10 @@ def get_total_referrals_count_route():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/create_field_officer', methods=['POST'])
+import requests
+from flask import request, jsonify
+
+@app.route('/field/register', methods=['POST'])
 def create_field_officer():
     try:
         data = request.form  # Assuming the data is sent as form data
@@ -471,14 +474,9 @@ def create_field_officer():
         # Extracting data from the form
         email = data.get('email')
         full_name = data.get('full_name')
-        phone_number = data.get('phone_number')
-        agent_email = data.get('agent_email')
-        agent_card_no = data.get('agent_card_no')
-        address = data.get('address')
-        gender = data.get('gender')
-        date_of_birth = datetime.strptime(data.get('date_of_birth'), '%Y-%m-%d').date()
+        password = data.get('password')
         nominated_me = data.get('nominated_me')
-        profile_image = request.files.get('profile_image')
+        hashed_password = bcrypt_sha256.hash(password)
 
         # Make API call to fetch user data
         api_url = 'https://enetworkspay.com/backend_data/api/fetch_user_data.php'
@@ -487,36 +485,40 @@ def create_field_officer():
         # Make API call to fetch user data
         user_data_response = requests.post(api_url, data=api_payload_fetch_user_data).json()
 
-        # Check if the nominated user matches the referred user in the response
-        referred_by_email = user_data_response.get('agent_details', {}).get('referred_by', '')
-        if referred_by_email != nominated_me:
-            return jsonify({"error": "The nominated user does not match the referred user"}), 400
+        # Check if the status is True in the API response
+        status = user_data_response.get('status')
+        if not status:
+            return jsonify({"error": "API returned False status"}), 400
 
+        # # Check if the parent_email is empty or null
+        # parent_email = user_data_response.get('parent_email')
+        # if not parent_email:
+        #     return jsonify({"error": "Parent email is empty or null"}), 400
+
+        # # Check if the nominated user matches the referred user in the response
+        # referred_by_email = user_data_response.get('agent_details', {}).get('referred_by', '')
+        # if referred_by_email != nominated_me:
+        #     return jsonify({"error": "The nominated user does not match the referred user"}), 400
+
+        # Check if the user with the provided email already exists
+        if User.query.filter_by(email=email).first():
+            return jsonify({"error": "User with this email already exists"}), 400
+        # Continue with the rest of your code for creating the field officer...
         # Create a unique referral link
         unique_referral_link = f"https://enetworkspay.com/register.php?ref={nominated_me}&id={email}"
-
-        password = "0000-0000"
-        hashed_password = bcrypt_sha256.hash(password)
 
         # Create a new field officer instance
         new_field_officer = FieldOfficer(
             email=email,
             full_name=full_name,
             password=hashed_password,
-            phone_number=phone_number,
-            agent_email=agent_email,
-            agent_card_no=agent_card_no,
-            address=address,
-            gender=gender,
-            date_of_birth=date_of_birth,
-            nominated_me=nominated_me,
+            nominated_me="legadax@outlook.com",
             unique_referral_link=unique_referral_link,
             created_at=datetime.utcnow(),
             modified_at=datetime.utcnow(),
-            profile_image=cloudinary.uploader.upload(profile_image)['url'] if profile_image else None,
             is_email_verified=False,
-            filled_form=True,  # Assuming the form is being filled during creation
-            office_status=False  # Assuming the default office status
+            filled_form=False,
+            office_status=False
         )
 
         # Add the new field officer to the database
@@ -530,7 +532,7 @@ def create_field_officer():
         if new_field_officer:
             # Create a referral for the new field officer
             monthly_target = 100
-            referral_data = Referral(
+            referral_data = FieldOfficerReferral(
                 user_id=new_field_officer.id,
                 monthly_target=monthly_target,
                 total_referrals=0
@@ -547,6 +549,7 @@ def create_field_officer():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route('/field/login', methods=["POST"])
 def field_login():
     email = request.json.get('email')
@@ -562,10 +565,6 @@ def field_login():
 
     # Return the access token and user role as JSON response
     return jsonify(message="Logged in successfully", access_token=access_token), 200
-
-
-
-
 
 
 @app.route('/field/dashboard', methods=["GET"])
@@ -591,8 +590,8 @@ def field_submit_referral():
     try:
         current_user_id = get_jwt_identity()
 
-        # Ensure the current user exists
-        current_user = FieldOfficer.query.get(current_user_id)
+        # Query the user information from the database
+        current_user = FieldOfficer.query.filter_by(id=current_user_id).first()
         if not current_user:
             return jsonify({"message": "User not found"}), 404
 
@@ -672,7 +671,7 @@ def field_submit_form():
         if not current_user_id:
             return jsonify({"message": "User not logged in"}), 401
 
-        user = User.query.get(current_user_id)
+        user = FieldOfficer.query.filter_by(id=current_user_id).first()
         if not user:
             return jsonify({"message": "User not found"}), 404
 
@@ -680,40 +679,36 @@ def field_submit_form():
         signature_image = request.files.get('signature')
         profile_image = request.files.get('profile_image')
         passport_photo = request.files.get('passport_photo')
-        guarantor_photo = request.files.get('guarantor_passport')
 
-        if not signature_image or not profile_image or not passport_photo or not guarantor_photo:
+        if not signature_image or not profile_image or not passport_photo:
             return jsonify(message="One or more required files not provided in the request"), 400
 
         required_fields = ['name', 'address', 'bvn', 'nin', 'agent_email', 'agent_card_number',
-                           'gender', 'guarantor_name', 'guarantor_phone_number', 'guarantor_bvn', 'guarantor_nin',
-                           'guarantor_address', 'date_of_birth', 'phone_number']
+                           'gender', 'date_of_birth', 'phone_number']
 
         for field in required_fields:
             if field not in form_data:
                 return jsonify({"message": f"Missing required field: {field}"}), 400
 
+        signature_image1 = cloudinary.uploader.upload(signature_image)['url']
+        profile_image1 = cloudinary.uploader.upload(profile_image)['url']
+        passport_photo1 = cloudinary.uploader.upload(passport_photo)['url']
+
         # Create a new instance of AccecptanceForm
-        acceptance_form = AccecptanceForm(
+        acceptance_form = FieldOfficerAccecptanceForm(
             full_name=form_data.get('name'),
+            address=form_data.get('address'),
             bvn=form_data.get('bvn'),
             nin=form_data.get('nin'),
             agent_email=form_data.get('agent_email'),
             agent_card_number=form_data.get('agent_card_number'),
-            address=form_data.get('address'),
             gender=form_data.get('gender'),
-            guarantor_name=form_data.get('guarantor_name'),
-            guarantor_phone_number=form_data.get('guarantor_phone_number'),
-            guarantor_bvn=form_data.get('guarantor_bvn'),
-            guarantor_nin=form_data.get('guarantor_nin'),
-            guarantor_address=form_data.get('guarantor_address'),
-            guarantor_pasport=cloudinary.uploader.upload(guarantor_photo)['url'],
-            profile_image=cloudinary.uploader.upload(profile_image)['url'],
-            signature=cloudinary.uploader.upload(signature_image)['url'],
-            passport=cloudinary.uploader.upload(passport_photo)['url'],
+            date_of_birth=datetime.strptime(form_data.get('date_of_birth'), '%Y-%m-%d').date(),
+            signature=signature_image1,
+            profile_image=profile_image1,
+            passport=passport_photo1,
             created_at=datetime.utcnow(),
             modified_at=datetime.utcnow(),
-            date_of_birth=datetime.strptime(form_data.get('date_of_birth'), '%Y-%m-%d').date(),
             is_email_verified=False
         )
 
@@ -726,21 +721,15 @@ def field_submit_form():
 
         # Update remaining fields of the user model
 	    
-        user.full_name = form_data.get('name')
         user.address = form_data.get('address')
         user.bvn = form_data.get('bvn')
         user.nin = form_data.get('nin')
         user.agent_email = form_data.get('agent_email')
         user.agent_card_no = form_data.get('agent_card_number')
         user.gender = form_data.get('gender')
-        user.guarantor_name = form_data.get('guarantor_name')
-        user.guarantor_phone_number = form_data.get('guarantor_phone_number')
-        user.guarantor_bvn = form_data.get('guarantor_bvn')
-        user.guarantor_nin = form_data.get('guarantor_nin')
-        user.guarantor_address = form_data.get('guarantor_address')
         user.date_of_birth = datetime.strptime(form_data.get('date_of_birth'), '%Y-%m-%d').date()
         user.phone_number = form_data.get('phone_number')
-        user.profile_image = cloudinary.uploader.upload(profile_image)['url']
+        user.profile_image = profile_image1
 
         db.session.commit()
 
@@ -776,7 +765,7 @@ def field_get_successful_referrals_route():
     try:
         user_id = get_jwt_identity()
         # Check if the user exists
-        user = User.query.get(user_id)
+        user = FieldOfficer.query.get(user_id)
         if not user:
             return jsonify({"error": "User not found"}), 404
 
