@@ -491,14 +491,14 @@ def create_field_officer():
             return jsonify({"error": "API returned False status"}), 400
 
         # # Check if the parent_email is empty or null
-        # parent_email = user_data_response.get('parent_email')
-        # if not parent_email:
-        #     return jsonify({"error": "Parent email is empty or null"}), 400
+        parent_email = user_data_response.get('parent_email')
+        if not parent_email:
+             return jsonify({"error": "Parent email is empty or null"}), 400
 
-        # # Check if the nominated user matches the referred user in the response
-        # referred_by_email = user_data_response.get('agent_details', {}).get('referred_by', '')
-        # if referred_by_email != nominated_me:
-        #     return jsonify({"error": "The nominated user does not match the referred user"}), 400
+        # Check if the nominated user matches the referred user in the response
+        referred_by_email = user_data_response.get('agent_details', {}).get('referred_by', '')
+        if referred_by_email != nominated_me:
+		return jsonify({"error": "The nominated user does not match the referred user"}), 400
 
         # Check if the user with the provided email already exists
         if User.query.filter_by(email=email).first():
