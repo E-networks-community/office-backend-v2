@@ -21,6 +21,7 @@ from flask_mail import Mail, Message
 import base64
 import cloudinary
 import cloudinary.uploader
+import logging
 import cloudinary.api
 from passlib.hash import bcrypt_sha256
 cloudinary.config(
@@ -38,6 +39,7 @@ cloudinary.config(
 app = Flask(__name__)
 # app_asgi = WsgiToAsgi(app)
 app.config.from_object(ApplicationConfig)
+logging.basicConfig(level=logging.INFO)
 CORS(app, allow_headers=True, supports_credentials=True)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
@@ -463,19 +465,14 @@ def get_total_referrals_count_route():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-import requests
-from flask import request, jsonify
-
 @app.route('/field/register', methods=['POST'])
 def create_field_officer():
     try:
-        data = request.form  # Assuming the data is sent as form data
-
-        # Extracting data from the form
-        email = data.get('email')
-        full_name = data.get('full_name')
-        password = data.get('password')
-        nominated_me = data.get('nominated_me')
+        # Extracting data from the request JSON
+        email = request.json.get('email')
+        full_name = request.json.get('name')
+        password = request.json.get('password')
+        nominated_me = request.json.get('nominated_me')
         hashed_password = bcrypt_sha256.hash(password)
 
         # Make API call to fetch user data
@@ -483,26 +480,22 @@ def create_field_officer():
         api_payload_fetch_user_data = {'email': email}
 
         # Make API call to fetch user data
-        user_data_response = requests.post(api_url, data=api_payload_fetch_user_data).json()
+        user_data_response = requests.post(api_url, data=api_payload_fetch_user_data)
+        
+        # Print the API response content in the terminal
+        print("API Response:", user_data_response.text)
 
         # Check if the status is True in the API response
-        status = user_data_response.get('status')
+        user_data = user_data_response.json()
+        status = user_data.get('status')
         if not status:
             return jsonify({"error": "API returned False status"}), 400
 
-        # Check if the parent_email is empty or null
-        parent_email = user_data_response.get('parent_email')
-        if not parent_email:
-            return jsonify({"error": "Parent email is empty or null"}), 400
-
-        # Check if the nominated user matches the referred user in the response
-        referred_by_email = user_data_response.get('agent_details', {}).get('referred_by', '')
+        # Ensure that the person who referred the user is equal to nominated_me
+        referred_by_email = user_data.get('agent_details', {}).get('referred_by', '')
         if referred_by_email != nominated_me:
-            return jsonify({"error": "The nominated user does not match the referred user"}), 400
+            return jsonify({"error": "The person who referred you does not match the nominated_me"}), 400
 
-        # Check if the user with the provided email already exists
-        if User.query.filter_by(email=email).first():
-            return jsonify({"error": "User with this email already exists"}), 400
         # Continue with the rest of your code for creating the field officer...
         # Create a unique referral link
         unique_referral_link = f"https://enetworkspay.com/register.php?ref={nominated_me}&id={email}"
@@ -512,7 +505,7 @@ def create_field_officer():
             email=email,
             full_name=full_name,
             password=hashed_password,
-            nominated_me="legadax@outlook.com",
+            nominated_me=nominated_me,
             unique_referral_link=unique_referral_link,
             created_at=datetime.utcnow(),
             modified_at=datetime.utcnow(),
