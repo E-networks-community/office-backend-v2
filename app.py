@@ -524,7 +524,7 @@ def create_field_officer():
         # Check if the field officer was retrieved successfully
         if new_field_officer:
             # Create a referral for the new field officer
-            monthly_target = 100
+            monthly_target = 150
             referral_data = FieldOfficerReferral(
                 user_id=new_field_officer.id,
                 monthly_target=monthly_target,
@@ -814,6 +814,34 @@ def field_get_total_referrals_count_route():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/field/referral', methods=['GET'])
+@jwt_required()
+def field_get_user_referral():
+    try:
+        # Get the current user's identity from the JWT token
+        current_user_id = get_jwt_identity()
+
+        # Ensure the current user exists
+        current_user = FieldOfficer.query.get(current_user_id)
+        if not current_user:
+            return jsonify({"message": "User not found"}), 404
+
+        # Fetch the referral data for the user
+        referral_data = FieldOfficerReferral.query.filter_by(
+            user_id=current_user.id).first()
+
+        # Check if the referral data exists
+        if not referral_data:
+            return jsonify({"message": "Referral data not found for the user"}), 404
+
+        # Convert referral data to dictionary
+        referral_dict = referral_data.to_dict()
+
+        return jsonify({"referral_data": referral_dict}), 200
+
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

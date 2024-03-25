@@ -306,17 +306,24 @@ class FieldOfficerReferral(db.Model):
         return (self.total_referrals / self.monthly_target) * 100
 
     def get_monthly_users(self):
-        # Calculate the start and end dates for the current month
-        today = datetime.utcnow().date()
-        start_date = date(today.year, today.month, 1)
-        end_date = date(today.year, today.month + 1, 1) - timedelta(days=1)
+        try:
+            # Calculate the start and end dates for the current month
+            today = datetime.utcnow().date()
+            start_date = date(today.year, today.month, 1)
+            end_date = date(today.year, today.month + 1, 1) - timedelta(days=1)
 
-        # Query successful referrals within the current month
-        monthly_users = FieldOfficerSuccessfulReferral.query.filter(
-            FieldOfficerSuccessfulReferral.referrer_id == self.user_id,
-            FieldOfficerSuccessfulReferral.timestamp >= start_date,
-            FieldOfficerSuccessfulReferral.timestamp <= end_date
-        ).distinct(FieldOfficerSuccessfulReferral.referred_user_email).count()
+            # Query successful referrals within the current month
+            monthly_users_count = FieldOfficerSuccessfulReferral.query.filter(
+                FieldOfficerSuccessfulReferral.referrer_id == self.user_id,
+                FieldOfficerSuccessfulReferral.timestamp >= start_date,
+                FieldOfficerSuccessfulReferral.timestamp <= end_date
+            ).distinct(FieldOfficerSuccessfulReferral.referred_user_email).count()
+
+            return monthly_users_count
+        except Exception as e:
+            print("Error in get_monthly_users:", e)
+            return None
+
 
 class FieldOfficerSuccessfulReferral(db.Model):
     id = db.Column(db.Integer, primary_key=True)
