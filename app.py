@@ -1,24 +1,13 @@
-from io import StringIO, BytesIO
-import pandas as pd
-import zipfile
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from functools import wraps
-import json
 from datetime import datetime
-import uuid
-from flask import Flask, redirect, render_template, request, jsonify, send_from_directory, session, send_file
+from flask import Flask, request, jsonify
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from flask_session import Session
 from models import db, User, AccecptanceForm, SuccessfulReferral, Referral, FieldOfficer, FieldOfficerReferral, FieldOfficerSuccessfulReferral, FieldOfficerAccecptanceForm
 from config import ApplicationConfig
-import os
 import requests
-import string
-from flask_mail import Mail, Message
-import base64
+from flask_mail import Mail
 import cloudinary
 import cloudinary.uploader
 import logging
@@ -45,7 +34,7 @@ bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 mail = Mail(app)
 migrate = Migrate(app, db)
-server_session = Session(app)
+# server_session = Session(app)
 db.init_app(app)
 # with app.app_context():
 #     db.drop_all()
@@ -94,7 +83,31 @@ def upload_image_to_cloudinary(image):
 
 @app.route('/')
 def hello_world():
-    return 'Hello from Koyeb'
+    return jsonify(message="Hello from Aldorax!")
+
+@app.route("/api/submit", methods=["POST"])
+def submit_test():
+    form_data = request.form.to_dict()
+    files = request.files
+
+    # Print form data in the terminal
+    print("Received form data:")
+    for key, value in form_data.items():
+        print(f"{key}: {value}")
+
+    # Print file data in the terminal
+    print("Received files:")
+    for key in files:
+        file = files[key]
+        print(f"{key}: {file.filename}")
+
+    # Combine form data and file data for response
+    response_data = form_data.copy()
+    for key in files:
+        response_data[key] = files[key].filename
+
+    return jsonify(response_data), 200
+
 
 @app.route('/create_users_batch', methods=['POST'])
 def create_users_batch():

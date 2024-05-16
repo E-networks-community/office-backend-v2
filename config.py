@@ -10,7 +10,6 @@ class ApplicationConfig:
 
     redis_client = redis.Redis()
 
-    SECRET_KEY = os.environ.get("SECRET_KEY")
 
     SQLALCHEMY_TRACK_MODIFICATIONS = os.environ.get(
         "SQLALCHEMY_TRACK_MODIFICATIONS")
@@ -27,13 +26,10 @@ class ApplicationConfig:
     SQLALCHEMY_DATABASE_URI = "postgresql://postgres:oRFudttTNIpRLXpfNYTemrDjGjiQESOn@roundhouse.proxy.rlwy.net:33543/railway"
 
     DATABASE_ENGINE = create_engine(SQLALCHEMY_DATABASE_URI)
-    SESSION_TYPE = os.environ.get("SESSION_TYPE")
     REDIS_URL = "redis://default:fdMgaPnGoOkK12ig5kckE44iDMjFOPKK@monorail.proxy.rlwy.net:33538"
     SESSION_REDIS = redis.from_url(REDIS_URL)
-    SESSION_KEY_PREFIX = os.environ.get("SESSION_KEY_PREFIX")
     # SESSION_REDIS = redis_client
     SESSION_PERMANENT = os.environ.get("SESSION_PERMANENT")
-    SESSION_USE_SIGNER = os.environ.get("SESSION_USE_SIGNER")
     PERMANENT_SESSION_LIFETIME = 86400
 
     MAIL_SERVER = 'smtp.elasticemail.com'
@@ -45,3 +41,11 @@ class ApplicationConfig:
     DATABASE_INITIALIZED = False
 
     JWT_ACCESS_TOKEN_EXPIRES = 43200
+
+    SECRET_KEY="KeyKeyAldoKeyKey"
+    SESSION_KEY_PREFIX="your_prefix_here"
+    SESSION_TYPE=redis
+    SESSION_USE_SIGNER=False
+    SQLALCHEMY_ECHO=True
+    SQLALCHEMY_TRACK_MODIFICATIONS=False
+    JWT_SECRET_KEY = "jbgjgbgvhdgkbkjdn"
