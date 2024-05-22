@@ -49,8 +49,8 @@ db.init_app(app)
 def add_cors_headers(response):
     frontend_domains = [
         'http://localhost:3000',
-        'http://enetworksjobs.com.ng',
-        'http://www.enetworksjobs.com.ng'
+        'https://enetworksjobs.com.ng',
+        'https://www.enetworksjobs.com.ng'
     ]
 
     origin = request.headers.get('Origin')
