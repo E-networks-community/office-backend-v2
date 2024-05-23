@@ -614,6 +614,25 @@ def get_field_referral():
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
 
+@app.route('/field/successful_referrals', methods=['GET'])
+@jwt_required()
+def get_field_successful_referrals():
+    try:
+        # Get the user ID from the JWT token
+        user_id = get_jwt_identity()
+
+        # Query successful referrals for the user
+        successful_referrals = FieldOfficerSuccessfulReferral.query.filter_by(referrer_id=user_id).all()
+
+        # Convert successful referrals to a list of dictionaries
+        successful_referrals_data = [referral.to_dict() for referral in successful_referrals]
+
+        # Return the successful referrals data
+        return jsonify(successful_referrals_data), 200
+    except Exception as e:
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
+
+
 @app.route('/login/nominated_field_officer', methods=['POST'])
 def nominated_field_officer_login():
     data = request.json
