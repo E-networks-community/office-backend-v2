@@ -652,7 +652,7 @@ def nominated_field_dashboard():
 
 
 
-@ap.route("/change-password", methods=["POST"])
+@app.route("/change-password", methods=["POST"])
 @jwt_required()
 def change_password():
     data = request.json
