@@ -138,13 +138,13 @@ def create_user():
         # Create new user
         new_user = User(
             full_name=data.get('full_name'),
+            phone_number=data.get('phone_number'),
             agent_email=data.get('agent_email'),
-            password=password,
             agent_card_number=data.get('agent_card_number'),
+            password=password,
             address=data.get('address'),
             state=data.get('state'),
             lga=data.get('lga'),
-            phone_number=data.get('phone_number'),
             ward=data.get('ward'),
             gender=data.get('gender'),
             next_of_kin_name=data.get('next_of_kin_name'),
@@ -169,6 +169,7 @@ def create_user():
         return jsonify(new_user.to_dict()), 201
 
     except Exception as e:
+        print(str(e))
         return jsonify({"error": str(e)}), 500
 
 
@@ -221,11 +222,11 @@ def create_field_officer():
         new_field_officer = FieldOfficer(
             full_name=data.get('full_name'),
             agent_email=data.get('agent_email'),
-            agent_card_no=data.get('agent_card_no'),
+            agent_card_no=data.get('agent_card_number'),
+            password=password,
             bvn=data.get('bvn'),
             nin=data.get('nin'),
             gender=data.get('gender'),
-            password=password,
             address=data.get('address'),
             guarantor_name=data.get('guarantor_name'),
             guarantor_phone_number=data.get('guarantor_phone_number'),
@@ -239,8 +240,6 @@ def create_field_officer():
             signature=signature_url,
             passport_photo=passport_photo_url,
             guarantor_photo=guarantor_photo_url,
-            is_email_verified=data.get('is_email_verified', False),
-            office_status=data.get('office_status', False)
         )
 
         # Add and commit the new FieldOfficer to the database

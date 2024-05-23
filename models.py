@@ -48,28 +48,28 @@ class FieldApplication(db.Model):
     id = db.Column(db.String(36), primary_key=True,
                    default=lambda: str(uuid.uuid4()), unique=True)
     full_name = db.Column(db.String(255), nullable=False, unique=True)
-    agent_email = db.Column(db.String(20), nullable=False, unique=True)
-    agent_card_number = db.Column(db.String(20), nullable=False, unique=True)
+    agent_email = db.Column(db.String(255), nullable=False, unique=True)
+    agent_card_number = db.Column(db.String(255), nullable=False, unique=True)
     address = db.Column(db.String(255), nullable=False)
     state = db.Column(db.String(255), nullable=False)
     lga = db.Column(db.String(255), nullable=False)
     phone_number = db.Column(
-        db.String(20), nullable=False, unique=True)
+        db.String(255), nullable=False, unique=True)
     ward = db.Column(db.String(255), nullable=False)
-    gender = db.Column(db.String(20), nullable=False, unique=True)
-    next_of_kin_name = db.Column(db.String(20), nullable=False, unique=True)
+    gender = db.Column(db.String(255), nullable=False, unique=True)
+    next_of_kin_name = db.Column(db.String(255), nullable=False, unique=True)
     next_of_kin_phone_number = db.Column(
-        db.String(20), nullable=False, unique=True)
+        db.String(255), nullable=False, unique=True)
     next_of_kin_relationship = db.Column(
-        db.String(20), nullable=False, unique=True)
+        db.String(255), nullable=False, unique=True)
     next_of_kin_email_address = db.Column(
-        db.String(20), nullable=False, unique=True)
+        db.String(255), nullable=False, unique=True)
     guarantor_name = db.Column(db.String(255), nullable=False, unique=True)
     guarantor_phone_number = db.Column(
-        db.String(20), nullable=False, unique=True)
-    language = db.Column(db.String(20), nullable=False, unique=True)
-    position = db.Column(db.String(20), nullable=False, unique=True)
-    position_state = db.Column(db.String(20), nullable=False, unique=True)
+        db.String(255), nullable=False, unique=True)
+    language = db.Column(db.String(255), nullable=False, unique=True)
+    position = db.Column(db.String(255), nullable=False, unique=True)
+    position_state = db.Column(db.String(255), nullable=False, unique=True)
     passport_photo = db.Column(db.TEXT, nullable=False, unique=True)
 
     # time and date
@@ -171,28 +171,28 @@ class User(db.Model):
                    default=lambda: str(uuid.uuid4()), unique=True)
     full_name = db.Column(db.String(255), nullable=False, unique=True)
     password = db.Column(db.String(255), nullable=False)
-    agent_email = db.Column(db.String(20), nullable=False, unique=True)
-    agent_card_number = db.Column(db.String(20), nullable=False, unique=True)
+    agent_email = db.Column(db.String(255), nullable=False, unique=True)
+    agent_card_number = db.Column(db.String(255), nullable=False, unique=True)
     address = db.Column(db.String(255), nullable=False)
     state = db.Column(db.String(255), nullable=False)
     lga = db.Column(db.String(255), nullable=False)
     phone_number = db.Column(
-        db.String(20), nullable=False, unique=True)
+        db.String(255), nullable=False, unique=True)
     ward = db.Column(db.String(255), nullable=False)
-    gender = db.Column(db.String(20), nullable=False, unique=True)
-    next_of_kin_name = db.Column(db.String(20), nullable=False, unique=True)
+    gender = db.Column(db.String(255), nullable=False, unique=True)
+    next_of_kin_name = db.Column(db.String(255), nullable=False, unique=True)
     next_of_kin_phone_number = db.Column(
-        db.String(20), nullable=False, unique=True)
+        db.String(255), nullable=False, unique=True)
     next_of_kin_relationship = db.Column(
-        db.String(20), nullable=False, unique=True)
+        db.String(255), nullable=False, unique=True)
     next_of_kin_email_address = db.Column(
-        db.String(20), nullable=False, unique=True)
+        db.String(255), nullable=False, unique=True)
     guarantor_name = db.Column(db.String(255), nullable=False, unique=True)
     guarantor_phone_number = db.Column(
-        db.String(20), nullable=False, unique=True)
-    language = db.Column(db.String(20), nullable=False, unique=True)
-    position = db.Column(db.String(20), nullable=False, unique=True)
-    position_state = db.Column(db.String(20), nullable=False, unique=True)
+        db.String(255), nullable=False, unique=True)
+    language = db.Column(db.String(255), nullable=False, unique=True)
+    position = db.Column(db.String(255), nullable=False, unique=True)
+    position_state = db.Column(db.String(255), nullable=False, unique=True)
     passport_photo = db.Column(db.TEXT, nullable=False, unique=True)
     referrals_made = db.relationship(
         'SuccessfulReferral', backref='referrer', lazy='dynamic')
@@ -229,12 +229,12 @@ class FieldOfficer(db.Model):
     address = db.Column(db.String(255), index=True, nullable=True)
     guarantor_name = db.Column(db.String(255), nullable=False, unique=True)
     guarantor_phone_number = db.Column(
-        db.String(20), nullable=False, unique=True)
+        db.String(255), nullable=False, unique=True)
     guarantor_bvn = db.Column(db.String(25), nullable=False, unique=True)
     guarantor_nin = db.Column(
         db.String(25), nullable=False, unique=True)
     guarantor_address = db.Column(db.String(255), nullable=False)
-    phone_number = db.Column(db.String(20), index=True,
+    phone_number = db.Column(db.String(255), index=True,
                              unique=True, nullable=True)
     date_of_birth = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -392,12 +392,12 @@ class NominatedFieldOfficer(db.Model):
     address = db.Column(db.String(255), index=True, nullable=True)
     guarantor_name = db.Column(db.String(255), nullable=False, unique=True)
     guarantor_phone_number = db.Column(
-        db.String(20), nullable=False, unique=True)
+        db.String(255), nullable=False, unique=True)
     guarantor_bvn = db.Column(db.String(25), nullable=False, unique=True)
     guarantor_nin = db.Column(
         db.String(25), nullable=False, unique=True)
     guarantor_address = db.Column(db.String(255), nullable=False)
-    phone_number = db.Column(db.String(20), index=True,
+    phone_number = db.Column(db.String(255), index=True,
                              unique=True, nullable=True)
     date_of_birth = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
