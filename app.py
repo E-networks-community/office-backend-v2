@@ -650,6 +650,38 @@ def nominated_field_dashboard():
 
     return jsonify(dashboard_data), 200
 
+
+
+@ap.route("/change-password", methods=["POST"])
+@jwt_required()
+def change_password():
+    data = request.json
+    old_password = data.get('oldPassword')
+    new_password = data.get('newPassword')
+
+    if not old_password or not new_password:
+        return jsonify({"success": False, "message": "Old and new passwords are required"}), 400
+    
+    current_user_id = get_jwt_identity()
+    if not current_user_id:
+        return jsonify(message="User not authenticated")
+    
+    staff = Staff.query.get(user_id)
+    if not staff:
+        return jsonify(message="Staff not found")
+
+    if not bcrypt_sha256.verify(staff.password, old_password):
+        return jsonify({"error": "Incorrect old password"}), 401
+
+    hashed_password = bcrypt_sha256.encrypt(new_password)
+
+    staff.password = hashed_password
+    db.session.commit()
+
+    return jsonify({"success": True, "message": "Password changed successfully"}), 200
+    
+
+
 # @app.route('/create_users_batch', methods=['POST'])
 # def create_users_batch():
 #     """
