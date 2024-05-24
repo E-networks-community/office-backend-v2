@@ -256,7 +256,12 @@ class FieldOfficer(db.Model):
 
     def to_dict(self):
         return {
-            "id": self.id
+            "id": self.id,
+            "full_name": self.full_name,
+            "agent_email": self.agent_email,
+            "office_status": self.office_status,
+            "referral": self.referral.to_dict() if self.referral else None,
+            "successful_referrals": [referral.to_dict() for referral in self.referrals_made]
         }
 
 

@@ -505,7 +505,7 @@ def field_officer_login():
     password = data.get('password')
 
     # Find field officer by email
-    field_officer = FieldOfficer.query.filter_by(email=email).first()
+    field_officer = FieldOfficer.query.filter_by(agent_email=email).first()
     if not field_officer:
         return jsonify({"error": "Invalid email or password"}), 401
 
