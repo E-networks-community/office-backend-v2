@@ -685,7 +685,7 @@ def change_password():
     if not current_user_id:
         return jsonify(message="User not authenticated")
     
-    staff = Staff.query.get(user_id)
+    staff = User.query.get(user_id)
     if not staff:
         return jsonify(message="Staff not found")
 
