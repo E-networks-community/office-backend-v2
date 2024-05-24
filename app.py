@@ -514,7 +514,10 @@ def field_officer_login():
         return jsonify({"error": "Invalid email or password"}), 401
 
     # Return field officer details
-    return jsonify({"message": "Field officer logged in successfully", "field_officer": field_officer.to_dict()}), 200
+    access_token = create_access_token(identity=str(field_officer.id))
+
+    # Return staff details
+    return jsonify({"message": "Staff logged in successfully", "access_token": access_token}), 200
 
 # Nominated Field Officer login route
 
@@ -568,30 +571,30 @@ def get_field_referral():
 
         # Get referral counts for today
         today = datetime.utcnow().date()
-        referrals_today = FieldOfficerReferral.query.filter(
-            FieldOfficerReferral.referrer_id == user_id,
-            func.DATE(FieldOfficerReferral.timestamp) == today
+        referrals_today = FieldOfficerSuccessfulReferral.query.filter(
+            FieldOfficerSuccessfulReferral.referrer_id == user_id,
+            func.DATE(FieldOfficerSuccessfulReferral.timestamp) == today
         ).count()
 
         # Get referral counts for this week
         start_of_week = today - timedelta(days=today.weekday())
         end_of_week = start_of_week + timedelta(days=6)
-        referrals_this_week = FieldOfficerReferral.query.filter(
-            FieldOfficerReferral.referrer_id == user_id,
+        referrals_this_week = FieldOfficerSuccessfulReferral.query.filter(
+            FieldOfficerSuccessfulReferral.referrer_id == user_id,
             and_(
-                func.DATE(FieldOfficerReferral.timestamp) >= start_of_week,
-                func.DATE(FieldOfficerReferral.timestamp) <= end_of_week
+                func.DATE(FieldOfficerSuccessfulReferral.timestamp) >= start_of_week,
+                func.DATE(FieldOfficerSuccessfulReferral.timestamp) <= end_of_week
             )
         ).count()
 
         # Get referral counts for this month
         start_of_month = date(today.year, today.month, 1)
         end_of_month = date(today.year, today.month + 1, 1) - timedelta(days=1)
-        referrals_this_month = FieldOfficerReferral.query.filter(
-            FieldOfficerReferral.referrer_id == user_id,
+        referrals_this_month = FieldOfficerSuccessfulReferral.query.filter(
+            FieldOfficerSuccessfulReferral.referrer_id == user_id,
             and_(
-                func.DATE(FieldOfficerReferral.timestamp) >= start_of_month,
-                func.DATE(FieldOfficerReferral.timestamp) <= end_of_month
+                func.DATE(FieldOfficerSuccessfulReferral.timestamp) >= start_of_month,
+                func.DATE(FieldOfficerSuccessfulReferral.timestamp) <= end_of_month
             )
         ).count()
 
